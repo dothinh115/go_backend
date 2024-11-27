@@ -16,14 +16,18 @@ var (
 	DbName     string = util.GetEnv("DB_NAME")
 )
 
-var DB *gorm.DB
-var err error
+var db *gorm.DB
 
-func ConnectDB() {
+func init() {
 	dsn := fmt.Sprintf("user=%s password=%s dbname=%s host=%s port=5432", DbUsername, DbPassword, DbName, DbHost)
-	DB, err = gorm.Open(postgres.Open(dsn))
+	var err error
+	db, err = gorm.Open(postgres.Open(dsn))
 	if err != nil {
 		log.Fatal(err)
 	}
 	util.SuccessLog("Connect db thành công!")
+}
+
+func GetDb() *gorm.DB {
+	return db
 }

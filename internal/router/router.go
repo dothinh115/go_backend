@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-var Controllers []Controller = make([]Controller, 0)
+var controllers []Controller = make([]Controller, 0)
 
 type Handler func(*gin.Context) (interface{}, error)
 
@@ -17,8 +17,12 @@ type Controller struct {
 	Handler Handler
 }
 
-func ControllerRegister(controller Controller) {
-	Controllers = append(Controllers, controller)
+func ControllerRegister(controller *Controller) {
+	controllers = append(controllers, *controller)
+}
+
+func GetControllers() []Controller {
+	return controllers
 }
 
 func ExecuteHandler(handler Handler) gin.HandlerFunc {
@@ -35,7 +39,9 @@ func ExecuteHandler(handler Handler) gin.HandlerFunc {
 			}
 		})
 
-		for _, intercept := range interceptors.Interceptors {
+		interceptors := interceptors.GetInterceptors()
+
+		for _, intercept := range interceptors {
 			observable.Map(intercept)
 		}
 

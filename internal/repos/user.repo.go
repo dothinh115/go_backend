@@ -9,6 +9,7 @@ import (
 
 type userRepository interface {
 	GetAllUsers() (interface{}, error)
+	GetUserById(id string) (interface{}, error)
 }
 
 type userRepo struct {
@@ -17,12 +18,22 @@ type userRepo struct {
 
 func (ur *userRepo) GetAllUsers() (interface{}, error) {
 	var users []models.User
-	if err := database.DB.Find(&users).Error; err != nil {
+	if err := ur.DB.Find(&users).Error; err != nil {
 		return nil, err
 	}
 	return users, nil
 }
 
-var User userRepository = &userRepo{
-	DB: database.DB,
+func (ur *userRepo) GetUserById(id string) (interface{}, error) {
+	var user models.User
+	if err := ur.DB.Where("id = ?", id).Find(&user).Error; err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
+func User() userRepository {
+	return &userRepo{
+		DB: database.GetDb(),
+	}
 }

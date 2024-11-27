@@ -8,16 +8,28 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func ServerInit() {
+func init() {
 	// gin.SetMode(gin.ReleaseMode)
 
 	r := gin.Default()
-
-	for _, routeData := range router.Controllers {
+	controllers := router.GetControllers()
+	for _, routeData := range controllers {
 		switch routeData.Method {
 		case "GET":
 			{
 				r.GET(routeData.Path, router.ExecuteHandler(routeData.Handler))
+			}
+		case "POST":
+			{
+				r.POST(routeData.Path, router.ExecuteHandler(routeData.Handler))
+			}
+		case "PATCH":
+			{
+				r.PATCH(routeData.Path, router.ExecuteHandler(routeData.Handler))
+			}
+		case "DELETE":
+			{
+				r.DELETE(routeData.Path, router.ExecuteHandler(routeData.Handler))
 			}
 		default:
 			{

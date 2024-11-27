@@ -8,17 +8,33 @@ import (
 )
 
 func init() {
-	router.ControllerRegister(router.Controller{
+	router.ControllerRegister(&router.Controller{
 		Path:    "/users",
 		Method:  router.GET,
 		Handler: getAllUsers,
 	})
+
+	router.ControllerRegister(&router.Controller{
+		Path:    "/user/:id",
+		Method:  router.GET,
+		Handler: getUsersById,
+	})
 }
 
 func getAllUsers(ctx *gin.Context) (interface{}, error) {
-	users, err := repos.User.GetAllUsers()
+	users, err := repos.User().GetAllUsers()
 	if err != nil {
 		return nil, err
 	}
 	return users, nil
+}
+
+func getUsersById(ctx *gin.Context) (interface{}, error) {
+	id := ctx.Param("id")
+	user, err := repos.User().GetUserById(id)
+
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
 }

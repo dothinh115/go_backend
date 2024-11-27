@@ -34,7 +34,6 @@ func (os *ormStruct) Create(createValue interface{}, mainValue interface{}) {
 			}
 		} else if mainField.Type.Kind() == reflect.Slice {
 			elemType := mainField.Type.Elem()
-
 			if elemType.Kind() == reflect.Struct {
 				sliceType := reflect.SliceOf(elemType)
 				slice := reflect.New(sliceType).Interface()

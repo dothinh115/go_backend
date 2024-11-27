@@ -25,7 +25,7 @@ type Post struct {
 	ID         uint       `gorm:"column:id;primaryKey" json:"id"`
 	CreatedAt  time.Time  `gorm:"column:createdAt" json:"createdAt"`
 	UpdatedAt  time.Time  `gorm:"column:updatedAt" json:"updatedAt"`
-	Content    string     `gorm:"column:content;type:not null" json:"content"`
+	Content    string     `gorm:"column:content;not null" json:"content"`
 	AuthorID   uuid.UUID  `gorm:"column:authorId;type:uuid,not null" json:"-"`
 	Author     User       `gorm:"foreignKey:AuthorID" json:"author,omitempty"`
 	Categories []Category `gorm:"many2many:post_categories;joinForeignKey:PostID;joinReferences:CategoryID;constraint:OnCreate:CASCADE" json:"categories"`

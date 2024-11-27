@@ -40,6 +40,8 @@ func (os *ormStruct) Create(createValue interface{}, mainValue interface{}) {
 				if err := os.DB.Where("id IN ?", value).Find(slice).Error; err == nil {
 					mainValueReflect.FieldByName(field).Set(reflect.ValueOf(slice).Elem())
 				}
+			} else {
+				mainValueReflect.FieldByName(field).Set(reflect.ValueOf(value))
 			}
 		} else {
 			mainValueReflect.FieldByName(field).Set(reflect.ValueOf(value))

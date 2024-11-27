@@ -9,7 +9,7 @@ import (
 )
 
 func init() {
-	// gin.SetMode(gin.ReleaseMode)
+	gin.SetMode(gin.ReleaseMode)
 
 	r := gin.Default()
 	controllers := router.GetControllers()

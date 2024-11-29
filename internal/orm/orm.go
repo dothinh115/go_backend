@@ -29,7 +29,7 @@ func (os *ormStruct) Create(createValue interface{}, mainValue interface{}) {
 		}
 		if mainField.Type.Kind() == reflect.Struct {
 			currentStructPtr := reflect.New(mainField.Type).Interface()
-			if err := os.DB.Where("id = ?", value).First(&currentStructPtr).Error; err == nil {
+			if err := os.DB.Where("id = ?", value).First(currentStructPtr).Error; err == nil {
 				mainValueReflect.FieldByName(field).Set(reflect.ValueOf(currentStructPtr).Elem())
 			}
 		} else if mainField.Type.Kind() == reflect.Slice {

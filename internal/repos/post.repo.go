@@ -2,6 +2,7 @@ package repos
 
 import (
 	"project/internal/database"
+	"project/internal/dto"
 	"project/internal/models"
 	"project/internal/orm"
 
@@ -10,7 +11,7 @@ import (
 
 type postRepository interface {
 	GetAllPosts() (interface{}, error)
-	CreateNewPost(newPost *models.CreatePost) (interface{}, error)
+	CreateNewPost(newPost *dto.CreatePost) (interface{}, error)
 }
 
 type postRepo struct {
@@ -25,7 +26,7 @@ func (pr *postRepo) GetAllPosts() (interface{}, error) {
 	return posts, nil
 }
 
-func (pr *postRepo) CreateNewPost(newPost *models.CreatePost) (interface{}, error) {
+func (pr *postRepo) CreateNewPost(newPost *dto.CreatePost) (interface{}, error) {
 
 	var post models.Post
 	orm.Service().Create(newPost, &post)

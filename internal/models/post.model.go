@@ -35,12 +35,6 @@ func (*Post) TableName() string {
 	return "post"
 }
 
-type CreatePost struct {
-	Author     uuid.UUID `json:"author"`
-	Content    string    `json:"content"`
-	Categories []uint    `json:"categories"`
-}
-
 func (p Post) MarshalJSON() ([]byte, error) {
 	type Alias Post
 	if p.Author.ID.String() == (uuid.UUID{}).String() {

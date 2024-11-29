@@ -1,7 +1,7 @@
 package controllers
 
 import (
-	"project/internal/models"
+	"project/internal/dto"
 	"project/internal/repos"
 	"project/internal/router"
 
@@ -31,7 +31,7 @@ func getAllPost(ctx *gin.Context) (interface{}, error) {
 }
 
 func createNewPost(ctx *gin.Context) (interface{}, error) {
-	var newPost models.CreatePost
+	var newPost dto.CreatePost
 	if e := ctx.ShouldBindJSON(&newPost); e != nil {
 		return nil, e
 	}

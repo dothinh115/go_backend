@@ -7,3 +7,9 @@ type CreatePost struct {
 	Content    string    `json:"content"`
 	Categories []uint    `json:"categories"`
 }
+
+type UpdatePost struct {
+	Author     *uuid.UUID `json:"author"`
+	Content    *string    `json:"content"`
+	Categories *[]uint    `json:"categories"`
+}

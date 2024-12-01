@@ -8,45 +8,138 @@ import (
 )
 
 type ormInterface interface {
-	Create(createValue interface{}, mainValue interface{})
+	Create(createValue interface{}, mainValue interface{}) error
+	Update(updatedValue interface{}, mainValue interface{}) error
 }
 
 type ormStruct struct {
 	DB *gorm.DB
 }
 
-func (os *ormStruct) Create(createValue interface{}, mainValue interface{}) {
+func (os *ormStruct) Create(createValue interface{}, mainValue interface{}) error {
 	createValueReflect := reflect.ValueOf(createValue).Elem()
 	mainValueReflect := reflect.ValueOf(mainValue).Elem()
+	preloadFields := make([]string, 0)
 
 	for i := 0; i < createValueReflect.NumField(); i++ {
 		field := createValueReflect.Type().Field(i).Name
-		value := createValueReflect.Field(i).Interface()
+		value := createValueReflect.Field(i)
 
 		mainField, found := mainValueReflect.Type().FieldByName(field)
 		if !found {
 			continue
 		}
 		if mainField.Type.Kind() == reflect.Struct {
-			currentStructPtr := reflect.New(mainField.Type).Interface()
-			if err := os.DB.Where("id = ?", value).First(currentStructPtr).Error; err == nil {
-				mainValueReflect.FieldByName(field).Set(reflect.ValueOf(currentStructPtr).Elem())
-			}
+			currentStructPtr := reflect.New(mainField.Type)
+			currentStructPtr.Elem().FieldByName("ID").Set(reflect.ValueOf(value.Interface()))
+			mainValueReflect.FieldByName(field).Set(currentStructPtr.Elem())
+			preloadFields = append(preloadFields, field)
 		} else if mainField.Type.Kind() == reflect.Slice {
 			elemType := mainField.Type.Elem()
 			if elemType.Kind() == reflect.Struct {
 				sliceType := reflect.SliceOf(elemType)
-				slice := reflect.New(sliceType).Interface()
-				if err := os.DB.Where("id IN ?", value).Find(slice).Error; err == nil {
-					mainValueReflect.FieldByName(field).Set(reflect.ValueOf(slice).Elem())
+				slice := reflect.MakeSlice(sliceType, 0, value.Len())
+				for j := 0; j < value.Len(); j++ {
+					currentStructPtr := reflect.New(elemType)
+					currentStructPtr.Elem().FieldByName("ID").Set(reflect.ValueOf(value.Index(j).Interface()))
+					slice = reflect.Append(slice, currentStructPtr.Elem())
 				}
+				mainValueReflect.FieldByName(field).Set(reflect.ValueOf(slice.Interface()))
+				preloadFields = append(preloadFields, field)
 			} else {
-				mainValueReflect.FieldByName(field).Set(reflect.ValueOf(value))
+				mainValueReflect.FieldByName(field).Set(reflect.ValueOf(value.Interface()))
 			}
 		} else {
-			mainValueReflect.FieldByName(field).Set(reflect.ValueOf(value))
+			mainValueReflect.FieldByName(field).Set(reflect.ValueOf(value.Interface()))
 		}
 	}
+	if err := os.DB.Create(mainValue).Error; err != nil {
+		return err
+	}
+	preload := os.DB
+	for _, field := range preloadFields {
+		preload = preload.Preload(field)
+	}
+	if err := preload.Where("id = ?", mainValueReflect.FieldByName("ID").Interface()).First(mainValue).Error; err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (os *ormStruct) Update(updatedValue interface{}, mainValue interface{}) error {
+	updatedValueReflect := reflect.ValueOf(updatedValue).Elem()
+	mainValueReflect := reflect.ValueOf(mainValue).Elem()
+	preloadFields := make([]string, 0)
+	relations := make(map[string][]interface{})
+
+	for i := 0; i < updatedValueReflect.NumField(); i++ {
+		field := updatedValueReflect.Type().Field(i).Name
+		value := updatedValueReflect.Field(i)
+
+		if value.IsZero() {
+			continue
+		}
+
+		mainField, found := mainValueReflect.Type().FieldByName(field)
+		if !found {
+			continue
+		}
+
+		if mainField.Type.Kind() == reflect.Struct {
+			currentStructPtr := reflect.New(mainField.Type)
+			currentStructPtr.Elem().FieldByName("ID").Set(reflect.ValueOf(value.Elem().Interface()))
+			mainValueReflect.FieldByName(field).Set(currentStructPtr.Elem())
+			preloadFields = append(preloadFields, field)
+		} else if mainField.Type.Kind() == reflect.Slice {
+			elemType := mainField.Type.Elem()
+			if elemType.Kind() == reflect.Struct {
+				if _, found := relations[field]; !found {
+					relations[field] = make([]interface{}, 0)
+				}
+				for j := 0; j < value.Elem().Len(); j++ {
+					currentStructPtr := reflect.New(elemType)
+					currentStructPtr.Elem().FieldByName("ID").Set(reflect.ValueOf(value.Elem().Index(j).Interface()))
+					relations[field] = append(relations[field], currentStructPtr.Elem().Interface())
+				}
+				preloadFields = append(preloadFields, field)
+			} else {
+				mainValueReflect.FieldByName(field).Set(reflect.ValueOf(value.Elem().Interface()))
+			}
+		} else {
+			mainValueReflect.FieldByName(field).Set(reflect.ValueOf(value.Elem().Interface()))
+		}
+
+	}
+	db := os.DB
+	if len(relations) > 0 {
+		for relation, entities := range relations {
+			copyDb := db.Preload(relation)
+			fieldReflect := mainValueReflect.FieldByName(relation)
+			fieldType := fieldReflect.Type()
+			fieldSlice := reflect.MakeSlice(fieldType, 0, len(entities))
+			for _, entity := range entities {
+				fieldSlice = reflect.Append(fieldSlice, reflect.ValueOf(entity))
+			}
+			fieldSlicePtr := reflect.New(fieldSlice.Type())
+			fieldSlicePtr.Elem().Set(fieldSlice)
+			if err := copyDb.Model(mainValue).Association(relation).Replace(fieldSlicePtr.Interface()); err != nil {
+				return err
+			}
+		}
+	}
+
+	if err := db.Updates(mainValue).Error; err != nil {
+		return err
+	}
+	for _, field := range preloadFields {
+		db = db.Preload(field)
+	}
+	if err := db.Where("id = ?", mainValueReflect.FieldByName("ID").Interface()).First(mainValue).Error; err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func Service() ormInterface {

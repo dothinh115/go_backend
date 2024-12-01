@@ -22,7 +22,7 @@ func init() {
 }
 
 func getAllUsers(ctx *gin.Context) (interface{}, error) {
-	users, err := repos.User().GetAllUsers()
+	users, err := repos.User().GetAll()
 	if err != nil {
 		return nil, err
 	}
@@ -31,7 +31,7 @@ func getAllUsers(ctx *gin.Context) (interface{}, error) {
 
 func getUsersById(ctx *gin.Context) (interface{}, error) {
 	id := ctx.Param("id")
-	user, err := repos.User().GetUserById(id)
+	user, err := repos.User().GetById(id)
 
 	if err != nil {
 		return nil, err

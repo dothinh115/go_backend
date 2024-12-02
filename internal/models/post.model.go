@@ -1,7 +1,6 @@
 package models
 
 import (
-	"encoding/json"
 	"project/internal/database"
 	"time"
 
@@ -22,33 +21,15 @@ func (PostCategory) TableName() string {
 }
 
 type Post struct {
-	ID         uint       `gorm:"column:id;primaryKey" json:"id"`
-	CreatedAt  time.Time  `gorm:"column:createdAt" json:"createdAt"`
-	UpdatedAt  time.Time  `gorm:"column:updatedAt" json:"updatedAt"`
-	Content    string     `gorm:"column:content;not null" json:"content"`
-	AuthorID   uuid.UUID  `gorm:"column:authorId;type:uuid,not null" json:"-"`
-	Author     User       `gorm:"foreignKey:AuthorID" json:"author,omitempty"`
-	Categories []Category `gorm:"many2many:post_categories;joinForeignKey:PostID;joinReferences:CategoryID;constraint:OnCreate:CASCADE" json:"categories"`
+	ID         uint        `gorm:"column:id;primaryKey" json:"id"`
+	CreatedAt  time.Time   `gorm:"column:createdAt" json:"createdAt"`
+	UpdatedAt  time.Time   `gorm:"column:updatedAt" json:"updatedAt"`
+	Content    string      `gorm:"column:content;not null" json:"content"`
+	AuthorID   uuid.UUID   `gorm:"column:authorId;type:uuid,not null" json:"-"`
+	Author     *User       `gorm:"foreignKey:AuthorID" json:"author,omitempty"`
+	Categories *[]Category `gorm:"many2many:post_categories;joinForeignKey:PostID;joinReferences:CategoryID;constraint:OnCreate:CASCADE" json:"categories,omitempty"`
 }
 
 func (*Post) TableName() string {
 	return "post"
-}
-
-func (p Post) MarshalJSON() ([]byte, error) {
-	type Alias Post
-	if p.Author.ID.String() == (uuid.UUID{}).String() {
-		return json.Marshal(&struct {
-			*Alias
-			Author interface{} `json:"author,omitempty"`
-		}{
-			Alias:  (*Alias)(&p),
-			Author: nil,
-		})
-	}
-	return json.Marshal(&struct {
-		*Alias
-	}{
-		Alias: (*Alias)(&p),
-	})
 }

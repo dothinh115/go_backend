@@ -29,22 +29,23 @@ func (os *ormStruct) Create(createValue interface{}, mainValue interface{}) erro
 		if !found {
 			continue
 		}
-		if mainField.Type.Kind() == reflect.Struct {
-			currentStructPtr := reflect.New(mainField.Type)
+		if mainField.Type.Kind() == reflect.Ptr && mainField.Type.Elem().Kind() == reflect.Struct {
+			currentStructPtr := reflect.New(mainField.Type.Elem())
 			currentStructPtr.Elem().FieldByName("ID").Set(reflect.ValueOf(value.Interface()))
-			mainValueReflect.FieldByName(field).Set(currentStructPtr.Elem())
+			mainValueReflect.FieldByName(field).Set(currentStructPtr)
 			preloadFields = append(preloadFields, field)
-		} else if mainField.Type.Kind() == reflect.Slice {
+		} else if mainField.Type.Kind() == reflect.Ptr && mainField.Type.Elem().Kind() == reflect.Slice {
 			elemType := mainField.Type.Elem()
-			if elemType.Kind() == reflect.Struct {
-				sliceType := reflect.SliceOf(elemType)
-				slice := reflect.MakeSlice(sliceType, 0, value.Len())
+			if elemType.Elem().Kind() == reflect.Struct {
+				slice := reflect.MakeSlice(elemType, 0, value.Len())
 				for j := 0; j < value.Len(); j++ {
-					currentStructPtr := reflect.New(elemType)
+					currentStructPtr := reflect.New(elemType.Elem())
 					currentStructPtr.Elem().FieldByName("ID").Set(reflect.ValueOf(value.Index(j).Interface()))
 					slice = reflect.Append(slice, currentStructPtr.Elem())
 				}
-				mainValueReflect.FieldByName(field).Set(reflect.ValueOf(slice.Interface()))
+				slicePtr := reflect.New(slice.Type())
+				slicePtr.Elem().Set(slice)
+				mainValueReflect.FieldByName(field).Set(slicePtr)
 				preloadFields = append(preloadFields, field)
 			} else {
 				mainValueReflect.FieldByName(field).Set(reflect.ValueOf(value.Interface()))
@@ -86,19 +87,19 @@ func (os *ormStruct) Update(updatedValue interface{}, mainValue interface{}) err
 			continue
 		}
 
-		if mainField.Type.Kind() == reflect.Struct {
-			currentStructPtr := reflect.New(mainField.Type)
+		if mainField.Type.Kind() == reflect.Ptr && mainField.Type.Elem().Kind() == reflect.Struct {
+			currentStructPtr := reflect.New(mainField.Type.Elem())
 			currentStructPtr.Elem().FieldByName("ID").Set(reflect.ValueOf(value.Elem().Interface()))
-			mainValueReflect.FieldByName(field).Set(currentStructPtr.Elem())
+			mainValueReflect.FieldByName(field).Set(currentStructPtr)
 			preloadFields = append(preloadFields, field)
-		} else if mainField.Type.Kind() == reflect.Slice {
-			elemType := mainField.Type.Elem()
-			if elemType.Kind() == reflect.Struct {
+		} else if mainField.Type.Kind() == reflect.Ptr && mainField.Type.Elem().Kind() == reflect.Slice {
+			elemType := mainField.Type.Elem() // []models.Category
+			if elemType.Elem().Kind() == reflect.Struct {
 				if _, found := relations[field]; !found {
 					relations[field] = make([]interface{}, 0)
 				}
 				for j := 0; j < value.Elem().Len(); j++ {
-					currentStructPtr := reflect.New(elemType)
+					currentStructPtr := reflect.New(elemType.Elem())
 					currentStructPtr.Elem().FieldByName("ID").Set(reflect.ValueOf(value.Elem().Index(j).Interface()))
 					relations[field] = append(relations[field], currentStructPtr.Elem().Interface())
 				}
@@ -115,9 +116,13 @@ func (os *ormStruct) Update(updatedValue interface{}, mainValue interface{}) err
 	if len(relations) > 0 {
 		for relation, entities := range relations {
 			copyDb := db.Preload(relation)
+
 			fieldReflect := mainValueReflect.FieldByName(relation)
 			fieldType := fieldReflect.Type()
-			fieldSlice := reflect.MakeSlice(fieldType, 0, len(entities))
+			if fieldType.Kind() == reflect.Ptr == fieldReflect.IsNil() {
+				fieldReflect.Set(reflect.New(fieldType.Elem()))
+			}
+			fieldSlice := reflect.MakeSlice(fieldType.Elem(), 0, len(entities))
 			for _, entity := range entities {
 				fieldSlice = reflect.Append(fieldSlice, reflect.ValueOf(entity))
 			}
